@@ -1,75 +1,56 @@
-/*********************************************************************
+/***********************************************************************
  * FishPiNo.ino
  * Hardware platform   : Arduino Uno
- * 
- * Description:
- * Aquarium temperature (heating and cooling)) and pH-controller.
- * Waterlevel indicator controls a cooling-fan, aquarium-heater and co2 system magnet valve.
- * LCD Display for alert and views.
- * 
- * Sensor pin:
- * 
- * DIGITAL:
- * LCD            : D2 - D3 - D4 - D5 - D11 - D12
- * LEDUP          : D6  // led warning temp. upper limit or cooling Fan relais!
- * WATERPIN       : D7  // floatswitch  for waterlevel
- * LEDWATER       : D8  // warning led for water level
- * DS18B20        : D9  // Signal pin on digital 9 temp sensor
- * LEDPH          : D10 // led warning ph or relais for magnetic valve co2-system
- * DHT22          : D13 // pin for DHT22
- * 
- * ANALOG:
- * dtempPin       : A1  //Lower temp.Limit pin with potmeter
- * utempPin       : A2  //Upper temp.limit pin with potmeter
- * SensorPin PH   : A3  //pH meter Analog output to Arduino Analog Input 3
- * phsetPin       : A4  //set desired ph-value with potmeter
- * HEATER         : A5  // led warning temp on  or RELAY FOR HEATER
- * 
- * Free PIN:
- * A0
- * 
  * Author  :  nke69(nookie69@gmail.com)
  * Version :  V1.0
  * Date    :  31-03-2018
  * 
- * Explanation :
  * 
- * Controlling Aquarium temperature via heating and cooling relay, pH- controller and waterlevel indicator controls a cooling-fan,
- * aquarium-heater and co2 system magnet valve.
- * I used a 4 relay board, used 3 relay so you can do without the 3 leds.(those were for testing).
- * Make sure the relay board has its own power-source (1x power adapter 12volt 1 amp,and 2x 7805 5 volt regulator.
- * 1x 7805 for arduino pro mini and sensors and and lcd, 1x 7805 for relay board.
- * 
- * Parts list:
- * 
- * 1x arduino pro mini 16 mhz 5 volts with atmega 328.
- * 1x ph sensor  PH meterSKU: SEN0161, amplifier board included.
- * 1x DS18B20 one wire digital temperatur sensor, watersealed.
- * 1x 4 channel relais board.5 volts
- * 4x potentiometer 10 k for phset, maxtempset, mintempset and lcd-contrast.
- * 1x 16x2 lcd.
- * 1x power adapter 12 volt 1 amp.
- * 1x powerplug for housing to connect poweradapter to.
- * 2x 7805 volt regulator ,make a small pcb board with those two and the needed capacitors,to make 2 seperated 5 volts supplies, one for the relais board,one for the rest.
- * 1x led or blinkled for waterlevel warning indicator.
- * 1x 3 screw connector for temp sensor, 1x 2 screw connector for float switch sensor
- * 1x float sensor switch Water Level Liquid Sensor.
- * 2x build-on wall sockets ,both on 220 volts mains,here controlled by two relais,1 for heater and 1 for magnetvalve.
- * 1x pushbutton,connected to reset.
- * 
- * Tips:
- * 
- * Sometimes lcd can get scrambled because of the relais switching or the switching of my TL lighting, 1 push on //reset to fix it.
- * a small condenator (100nF-10uF,trial and error) directly soldered over the lcd power pins(VSS and VDD) might help.
- * if lcd is crambled the controller still work properly,lcd is just for indication!
- * 
+ * Table of contents:
+ * Libraries                                 - [#LIBRARIES]
+ * Global Variables                          - [#VAR]
+ * Pins                                      - [#PIN]
+ * Setup Function                            - [#SETUP]
+ * Start Of Main Loop                        - [#LOOP]
+ * Methods                                   - [#METHODS]
  **********************************************************************/
+
+
+////////////////////////////////////Libraries///////////////////////////////////////
+///////////////////////////////////#LIBRARIES///////////////////////////////////////
 
 #include <Adafruit_Sensor.h>
 #include <LiquidCrystal.h>
 #include <OneWire.h>
 #include <SoftwareSerial.h>
 #include "DHT.h"
+
+
+////////////////////////////////Global Variables////////////////////////////////////
+/////////////////////////////////////#VAR///////////////////////////////////////////
+
+int val, phset;
+int state;
+int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
+unsigned long int avgValue;  //Store the average value of the sensor feedback
+float b;
+int buf[10], temp;
+byte flame[8] = {  
+  B00100, B00100, B01110, B01010, B11011, B10001, B10001, B01110};       //icon for flame
+byte smalflame[8] = {  
+  B00000, B00000, B00100, B00100, B01110, B01010, B10001, B01110};   //icon for small flame
+byte thermometer[8] = {  
+  B00100, B01010, B01110, B01110, B11111, B11111, B11111, B01110}; //icon thermometer
+byte celsius[8] = {  
+  B11100, B10100, B11100, B00000, B00000, B00000, B00000, B00000};     //icon celsius
+byte tank[8] = {  
+  B01100, B00010, B00111, B01101, B10101, B10111, B10111, B00111};        //icon co2 tank
+byte co2[8] = {  
+  B00001, B00100, B10001, B00100, B01010, B00001, B00010, B00001};         //icon c02 spray
+
+
+/////////////////////////////////////Define Pins////////////////////////////////////
+///////////////////////////////////////#PIN/////////////////////////////////////////
 
 /*DS18S20 Signal pin on digital 9 temp sensor , change to your digital pin number*/
 int DS18S20_Pin = 9;
@@ -81,45 +62,27 @@ DHT dht(DHTPIN, DHTTYPE);
 // pins use for LCD16x2
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-int val, phset;
-int state;
-
-int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
-
 //Temperature chip i/o
 OneWire ds(DS18S20_Pin);     // ds18b20 on digital pin 9
+
 const int dtempPin = A1;     //Lower temp.Limit pin with potmeter
 const int utempPin = A2;     //Upper temp.limit pin with potmeter
+
 #define phsetPin A4          //set desired ph-value with potmeter
+
 const int waterPin = 7;      //floatswitch  for waterlevel
 const int ledup = 6;         //led warning temp. upper limit or cooling Fan relais!
 const int ledph = 10;        //led warning ph or relais for magnetic valve co2-system
 const int ledwater = 8;      //warning led for water level
+
 const int heat = A5;         //relais heater element
+
 #define SensorPin A3         //pH meter Analog output to Arduino Analog Input 3
 #define Offset -0.40         //set your offset ph sensor here!!! shorted then ph=7 ,here mine gives 6.8 so offset = 0.2
-unsigned long int avgValue;  //Store the average value of the sensor feedback
-float b;
-int buf[10], temp;
 
-byte flame[8] = {
-  B00100, B00100, B01110, B01010, B11011, B10001, B10001, B01110
-};       //icon for flame
-byte smalflame[8] = {
-  B00000, B00000, B00100, B00100, B01110, B01010, B10001, B01110
-};   //icon for small flame
-byte thermometer[8] = {
-  B00100, B01010, B01110, B01110, B11111, B11111, B11111, B01110
-}; //icon thermometer
-byte celsius[8] = {
-  B11100, B10100, B11100, B00000, B00000, B00000, B00000, B00000
-};     //icon celsius
-byte tank[8] = {
-  B01100, B00010, B00111, B01101, B10101, B10111, B10111, B00111
-};        //icon co2 tank
-byte co2[8] = {
-  B00001, B00100, B10001, B00100, B01010, B00001, B00010, B00001
-};         //icon c02 spray
+
+///////////////////////////////////////Setup////////////////////////////////////////
+/////////////////////////////////////#SETUP/////////////////////////////////////////
 
 void setup()
 {
@@ -149,6 +112,10 @@ void setup()
   state == LOW ; // heat sign off
   dht.begin();
 }
+
+
+/////////////////////////////////////Loop///////////////////////////////////////////
+/////////////////////////////////////#LOOP//////////////////////////////////////////
 
 void loop()
 
@@ -266,7 +233,7 @@ void loop()
       delay(1000);
 
       /*
-      lcd.clear();
+        lcd.clear();
        lcd.setCursor(0, 0);
        lcd.print("Humidite : ");
        lcd.setCursor(11, 0);
@@ -363,6 +330,10 @@ void loop()
   }
 }
 
+
+/////////////////////////////////////Methods////////////////////////////////////////
+/////////////////////////////////////#METHODS///////////////////////////////////////
+
 float getTemp() {
   //returns the temperature from one DS18S20 in DEG Celsius
   byte data[12];
@@ -406,3 +377,4 @@ float getTemp() {
 
   return TemperatureSum;
 }
+
