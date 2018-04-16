@@ -75,17 +75,7 @@
 int DS18S20_Pin = 9;
 
 #define DHTPIN 13     // what pin we're connected to
-
-// Uncomment whatever type you're using!
-//#define DHTTYPE DHT11   // DHT 11
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
-
-// Connect pin 1 (on the left) of the sensor to +5V
-// Connect pin 2 of the sensor to whatever your DHTPIN is
-// Connect pin 4 (on the right) of the sensor to GROUND
-// Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
-
 DHT dht(DHTPIN, DHTTYPE);
 
 // pins use for LCD16x2
@@ -95,8 +85,10 @@ int val, phset;
 int state;
 
 int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
+
 //Temperature chip i/o
 OneWire ds(DS18S20_Pin);     // ds18b20 on digital pin 9
+
 const int dtempPin = A1;     //Lower temp.Limit pin with potmeter
 const int utempPin = A2;     //Upper temp.limit pin with potmeter
 #define phsetPin A4          //set desired ph-value with potmeter
@@ -106,7 +98,7 @@ const int ledph = 10;        //led warning ph or relais for magnetic valve co2-s
 const int ledwater = 8;      //warning led for water level
 const int heat = A5;         //relais heater element
 #define SensorPin A3         //pH meter Analog output to Arduino Analog Input 3
-#define Offset 0.0           //set your offset ph sensor here!!! shorted then ph=7 ,here mine gives 6.8 so offset = 0.2
+#define Offset -0.40           //set your offset ph sensor here!!! shorted then ph=7 ,here mine gives 6.8 so offset = 0.2
 unsigned long int avgValue;  //Store the average value of the sensor feedback
 float b;
 int buf[10], temp;
@@ -128,6 +120,7 @@ byte tank[8] = {
 byte co2[8] = {
   B00001, B00100, B10001, B00100, B01010, B00001, B00010, B00001
 };         //icon c02 spray
+
 void setup()
 {
   Serial.begin(9600);
@@ -169,7 +162,7 @@ void loop()
     utemp = map(utemp, 0, 1023, 19, 31);            // you can change 19 and 31 to your desired temp range for the set potmeter
     dtemp = map(dtemp, 0, 1023, 19, 31);            // idem
     phset = map(phset, 0.0, 1023.0, 10.0, 140.0);   // give the ph value
-    phset = (phset / 10);                           // with 1 decimal
+    phset = (phset / 20);                           // with 1 decimal
     for (int i = 0; i < 10; i++)                    //Get 10 sample value from the sensor for smooth the value
     {
       buf[i] = analogRead(SensorPin);
@@ -214,7 +207,7 @@ void loop()
       Serial.print(getTemp(), 1);
       Serial.print(" \t"); //tab
       delay(1000);
-      Serial.print(phValue, 1);
+      Serial.print(phValue, 2);
       Serial.print(" \t"); //tab
       delay(1000);
       Serial.print(waterlevel);
@@ -230,7 +223,6 @@ void loop()
     else
 
     {
-
       digitalWrite(ledwater, LOW); //led off
       lcd.setCursor(0, 0);
       lcd.print(char(3));
@@ -266,12 +258,14 @@ void loop()
       Serial.print(getTemp(), 1);
       Serial.print(" \t"); //tab
       delay(1000);
-      Serial.print(phValue, 1);
+      Serial.print(phValue, 2);
       Serial.print(" \t"); //tab
       delay(1000);
       Serial.print(waterlevel);
       Serial.print(" \t"); //tab
       delay(1000);
+      
+      /*
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Humidite : ");
@@ -282,6 +276,7 @@ void loop()
       lcd.setCursor(11, 1);
       lcd.print(temp, 2);
       delay(3000);
+      */
 
       // check if returns are valid, if they are NaN (not a number) then something went wrong!
 
