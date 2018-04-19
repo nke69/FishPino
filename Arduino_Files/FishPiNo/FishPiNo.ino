@@ -1,18 +1,18 @@
 /***********************************************************************
  * FishPiNo.ino
  * Hardware platform   : Arduino Uno
- * Author  :  nke69(nookie69@gmail.com)
+ * Author  :  nke69
  * Version :  V1.0
- * Date    :  31-03-2018
+ * Date    :  19/04/2018
  * 
  * 
  * Table of contents:
  * Libraries                                 - [#LIBRARIES]
  * Global Variables                          - [#VAR]
  * Pins                                      - [#PIN]
+ * Methods                                   - [#METHODS]
  * Setup Function                            - [#SETUP]
  * Start Of Main Loop                        - [#LOOP]
- * Methods                                   - [#METHODS]
  **********************************************************************/
 
 
@@ -33,20 +33,16 @@ int val, phset;
 int state;
 int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
 unsigned long int avgValue;  //Store the average value of the sensor feedback
+#define Offset -0.45         //23.0754716981 offset pour la conversion du pH
+int buf[10], temp; // tableau d'entiers de 10 valeurs et valeur tampon pour le triage
 float b;
-int buf[10], temp;
-byte flame[8] = {  
-  B00100, B00100, B01110, B01010, B11011, B10001, B10001, B01110};       //icon for flame
-byte smalflame[8] = {  
-  B00000, B00000, B00100, B00100, B01110, B01010, B10001, B01110};   //icon for small flame
-byte thermometer[8] = {  
-  B00100, B01010, B01110, B01110, B11111, B11111, B11111, B01110}; //icon thermometer
-byte celsius[8] = {  
-  B11100, B10100, B11100, B00000, B00000, B00000, B00000, B00000};     //icon celsius
-byte tank[8] = {  
-  B01100, B00010, B00111, B01101, B10101, B10111, B10111, B00111};        //icon co2 tank
-byte co2[8] = {  
-  B00001, B00100, B10001, B00100, B01010, B00001, B00010, B00001};         //icon c02 spray
+
+byte flame[8] = {B00100, B00100, B01110, B01010, B11011, B10001, B10001, B01110};       //icon for flame
+byte smalflame[8] = {B00000, B00000, B00100, B00100, B01110, B01010, B10001, B01110};   //icon for small flame
+byte thermometer[8] = {B00100, B01010, B01110, B01110, B11111, B11111, B11111, B01110}; //icon thermometer
+byte celsius[8] = {B11100, B10100, B11100, B00000, B00000, B00000, B00000, B00000};     //icon celsius
+byte tank[8] = {B01100, B00010, B00111, B01101, B10101, B10111, B10111, B00111};        //icon co2 tank
+byte co2[8] = {B00001, B00100, B10001, B00100, B01010, B00001, B00010, B00001};         //icon c02 spray
 
 
 /////////////////////////////////////Define Pins////////////////////////////////////
@@ -77,9 +73,55 @@ const int ledwater = 8;      //warning led for water level
 
 const int heat = A5;         //relais heater element
 
-#define SensorPin A3         //pH meter Analog output to Arduino Analog Input 3
-#define Offset -0.40         //set your offset ph sensor here!!! shorted then ph=7 ,here mine gives 6.8 so offset = 0.2
+#define SensorPin A3         //valeur analogique du pH meter sur la pin analogique 3
 
+
+/////////////////////////////////////Methods////////////////////////////////////////
+/////////////////////////////////////#METHODS///////////////////////////////////////
+
+float getTemp() {
+  //returns the temperature from one DS18S20 in DEG Celsius
+  byte data[12];
+  byte addr[8];
+
+  if ( !ds.search(addr)) {
+    //no more sensors on chain, reset search
+    ds.reset_search();
+    return -1000;
+  }
+
+  if ( OneWire::crc8( addr, 7) != addr[7]) {
+    //Serial.println("CRC is not valid!");
+    return -1000;
+  }
+
+  if ( addr[0] != 0x10 && addr[0] != 0x28) {
+    //Serial.print("Device is not recognized");
+    return -1000;
+  }
+
+  ds.reset();
+  ds.select(addr);
+  ds.write(0x44, 1); // start conversion, with parasite power on at the end
+
+  byte present = ds.reset();
+  ds.select(addr);
+  ds.write(0xBE); // Read Scratchpad
+
+  for (int i = 0; i < 9; i++) { // we need 9 bytes
+    data[i] = ds.read();
+  }
+
+  ds.reset_search();
+
+  byte MSB = data[1];
+  byte LSB = data[0];
+
+  float tempRead = ((MSB << 8) | LSB); //using two's compliment
+  float TemperatureSum = tempRead / 16;
+
+  return TemperatureSum;
+}
 
 ///////////////////////////////////////Setup////////////////////////////////////////
 /////////////////////////////////////#SETUP/////////////////////////////////////////
@@ -128,14 +170,15 @@ void loop()
 
     utemp = map(utemp, 0, 1023, 19, 31);            // you can change 19 and 31 to your desired temp range for the set potmeter
     dtemp = map(dtemp, 0, 1023, 19, 31);            // idem
+    
     phset = map(phset, 0.0, 1023.0, 10.0, 140.0);   // give the ph value
     phset = (phset / 20);                           // with 1 decimal
-    for (int i = 0; i < 10; i++)                    //Get 10 sample value from the sensor for smooth the value
+    for (int i = 0; i < 10; i++)                    // échantillonnage de 10 valeurs pour moyenner la mesure
     {
       buf[i] = analogRead(SensorPin);
       delay(10);
     }
-    for (int i = 0; i < 9; i++) //sort the analog from small to large
+    for (int i = 0; i < 9; i++) // triage des données récoltées dans le sens croissant
     {
       for (int j = i + 1; j < 10; j++)
       {
@@ -147,18 +190,24 @@ void loop()
         }
       }
     }
+    
+    // calcul de la moyenne des mesures en ne prenant pas les deux plus petites ni les deux plus grandes
+    avgValue = 0;
+    for (int i = 2; i < 8; i++)                       //take the average value of 6 center sample
+    avgValue += buf[i];
+    avgValue = avgValue/6;                            // car 6 mesures
 
+    //conversion de la mesure  
+    float phValue = (float)avgValue * 5.0 / 1024;     //convert the analog into millivolt
+    phValue = 3.5 * phValue + Offset;                 //convert the millivolt into pH value
+   
+   
     // Reading temperature or humidity takes about 250 milliseconds!
     // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
     float hum = dht.readHumidity();
     float temp = dht.readTemperature();
-
-    avgValue = 0;
-    for (int i = 2; i < 8; i++)                       //take the average value of 6 center sample
-      avgValue += buf[i];
-    float phValue = (float)avgValue * 5.0 / 1024 / 6; //convert the analog into millivolt
-    phValue = 3.5 * phValue + Offset;                 //convert the millivolt into pH value
-
+    
+   
     int waterlevel;
     waterlevel = digitalRead(waterPin);
 
@@ -329,52 +378,3 @@ void loop()
     }
   }
 }
-
-
-/////////////////////////////////////Methods////////////////////////////////////////
-/////////////////////////////////////#METHODS///////////////////////////////////////
-
-float getTemp() {
-  //returns the temperature from one DS18S20 in DEG Celsius
-  byte data[12];
-  byte addr[8];
-
-  if ( !ds.search(addr)) {
-    //no more sensors on chain, reset search
-    ds.reset_search();
-    return -1000;
-  }
-
-  if ( OneWire::crc8( addr, 7) != addr[7]) {
-    //Serial.println("CRC is not valid!");
-    return -1000;
-  }
-
-  if ( addr[0] != 0x10 && addr[0] != 0x28) {
-    //Serial.print("Device is not recognized");
-    return -1000;
-  }
-
-  ds.reset();
-  ds.select(addr);
-  ds.write(0x44, 1); // start conversion, with parasite power on at the end
-
-  byte present = ds.reset();
-  ds.select(addr);
-  ds.write(0xBE); // Read Scratchpad
-
-  for (int i = 0; i < 9; i++) { // we need 9 bytes
-    data[i] = ds.read();
-  }
-
-  ds.reset_search();
-
-  byte MSB = data[1];
-  byte LSB = data[0];
-
-  float tempRead = ((MSB << 8) | LSB); //using two's compliment
-  float TemperatureSum = tempRead / 16;
-
-  return TemperatureSum;
-}
-
