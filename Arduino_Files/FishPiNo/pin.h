@@ -3,10 +3,6 @@
 /*DS18S20 Signal pin on digital 9 temp sensor , change to your digital pin number*/
 int DS18S20_Pin = 9;
 
-#define DHTPIN 13     // what pin we're connected to
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
-DHT dht(DHTPIN, DHTTYPE);
-
 // pins use for LCD16x2
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 

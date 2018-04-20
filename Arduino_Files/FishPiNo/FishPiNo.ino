@@ -21,7 +21,6 @@
 #include <LiquidCrystal.h>
 #include <OneWire.h>
 #include <SoftwareSerial.h>
-#include "DHT.h"
 #include "var.h"
 #include "pin.h"
 #include "method.h"
@@ -55,7 +54,6 @@ void setup()
   digitalWrite(ledph, LOW);
   digitalWrite(heat, LOW);
   state == LOW ; // heat sign off
-  dht.begin();
 }
 
 
@@ -103,12 +101,6 @@ void loop()
     float phValue = (float)avgValue * 5.0 / 1024;     //convert the analog into millivolt
     phValue = Vref * phValue + Offset;                 //convert the millivolt into pH value  3.5 ou Vref   
    
-    // Reading temperature or humidity takes about 250 milliseconds!
-    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-    float hum = dht.readHumidity();
-    float temp = dht.readTemperature();
-    
-   
     int waterlevel;
     waterlevel = digitalRead(waterPin);
 
@@ -127,13 +119,7 @@ void loop()
       Serial.print(phValue, 2);
       Serial.print(" \t"); //tab
       delay(1000);
-      Serial.print(waterlevel);
-      Serial.print(" \t"); //tab
-      delay(1000);
-      Serial.print(hum);
-      Serial.print(" \t"); //tab
-      delay(2000);
-      Serial.println(temp);
+      Serial.println(waterlevel);
       delay(3000);                       // again change to your liking
     }
 
@@ -178,38 +164,9 @@ void loop()
       Serial.print(phValue, 2);
       Serial.print(" \t"); //tab
       delay(1000);
-      Serial.print(waterlevel);
-      Serial.print(" \t"); //tab
+      Serial.println(waterlevel);
       delay(1000);
 
-      /*
-        lcd.clear();
-       lcd.setCursor(0, 0);
-       lcd.print("Humidite : ");
-       lcd.setCursor(11, 0);
-       lcd.print(hum);
-       lcd.setCursor(0, 1);
-       lcd.print("Temp.air : ");
-       lcd.setCursor(11, 1);
-       lcd.print(temp, 2);
-       delay(3000);
-       */
-
-      // check if returns are valid, if they are NaN (not a number) then something went wrong!
-
-      if (isnan(temp) || isnan(hum)) {
-        Serial.print(temp=0);
-        Serial.print(" \t"); //tab
-        delay(2000);
-        Serial.println(hum=0);
-        }
-      
-      else {
-        Serial.print(hum);
-        Serial.print(" \t"); //tab
-        delay(2000);
-        Serial.println(temp);
-      }
 
       state = digitalRead(heat); // read the state of the heater-relais(when reset,the heatersign would turn on while heater is off.This gives the right indication.)
     }

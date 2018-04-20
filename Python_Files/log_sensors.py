@@ -17,9 +17,7 @@ pieces =data.split("\t")
 getTemp = pieces[0]
 phValue = pieces[1]
 waterlevel = pieces[2]
-hum = pieces[3]
-temp = pieces[4]
 
-with open("/path_to_directory/sensors.json","w+") as sensordata: sensordata.write('{"temperature": %s, "pH": %s, "niveau": %s, "humidite": %s, "tempext": %s}' % (pieces[0],pieces[1],pieces[2],pieces[3],pieces[4]))
+with open("/path_to_directory/sensors.json","w+") as sensordata: sensordata.write('{"temperature": %s, "pH": %s, "niveau": %s}' % (pieces[0],pieces[1],pieces[2]))
 
-print pieces[0],pieces[1],pieces[2],pieces[3],pieces[4]
+print pieces[0],pieces[1],pieces[2]
