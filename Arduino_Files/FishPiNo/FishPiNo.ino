@@ -73,8 +73,8 @@ void loop()
     utemp = map(utemp, 0, 1023, 22, 28);            // you can change 19 and 31 to your desired temp range for the set potmeter
     dtemp = map(dtemp, 0, 1023, 22, 28);            // idem
     
-    phset = map(phset, 0.0, 1023.0, 6.5, 10.0);   // give the ph value  original : phset = map(phset, 0.0, 1023.0, 10.0, 140.0);
-    phset = (phset / 20);                           // with 2 decimal
+    phset = map(phset, 0.0, 1023.0, 65, 100);       // give the ph value  original : phset = map(phset, 0.0, 1023.0, 10.0, 140.0);
+    phset = (phset / 10);                           // with 2 decimal
     for (int i = 0; i < 10; i++)                    // échantillonnage de 10 valeurs pour moyenner la mesure
     {
       buf[i] = analogRead(SensorPin);
