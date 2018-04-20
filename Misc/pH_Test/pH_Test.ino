@@ -6,7 +6,7 @@
  # SKU    : SEN0161
 */
 #define SensorPin A3            //pH meter Analog output to Arduino Analog Input 0
-#define Offset -1.00            //deviation compensate
+#define Offset 0.00            //deviation compensate
 #define LED 13
 #define samplingInterval 20
 #define printInterval 800
