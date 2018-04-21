@@ -3,9 +3,10 @@
 int val, phset;
 int state;
 int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
+
 unsigned long int avgValue;  //Store the average value of the sensor feedback
-#define Offset 0.45         //-0.45 offset pour la conversion du pH
-#define Vref 3.00
+#define Offset 1.80         //-0.45 offset pour la conversion du pH
+#define Vref 3.50
 int buf[10], temp; // tableau d'entiers de 10 valeurs et valeur tampon pour le triage
 float b;
 
