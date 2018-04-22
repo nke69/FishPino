@@ -4,10 +4,9 @@ int val, phset;
 int state;
 int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
 
-unsigned long int avgValue;  //Store the average value of the sensor feedback
-#define Offset 1.80         //-0.45 offset pour la conversion du pH
-#define Vref 3.50
-int buf[10], temp; // tableau d'entiers de 10 valeurs et valeur tampon pour le triage
+unsigned long int avgValue; //Store the average value of the sensor feedback
+#define Offset 1.65         //offset pH from sensor in calibration
+int buf[10], temp;          // tableau d'entiers de 10 valeurs et valeur tampon pour le triage
 float b;
 
 byte flame[8] = {B00100, B00100, B01110, B01010, B11011, B10001, B10001, B01110};       //icon for flame
