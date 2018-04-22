@@ -185,14 +185,14 @@ void loop()
       delay(10);
     }
 
-    if (getTemp() < dtemp - 0.4)  // temp lower than 0.1 degrees-celsius below min set temp
+    if (getTemp() < dtemp - 0.1)  // temp lower than 0.1 degrees-celsius below min set temp
     {
       digitalWrite(heat, HIGH);   // heater on
       delay(5);
       state = digitalRead(heat);
     }
 
-    if (getTemp() >= dtemp + 0.3) //temp higher than 0.2 degrees-celsius above min set temp
+    if (getTemp() >= dtemp + 0.2) //temp higher than 0.2 degrees-celsius above min set temp
     {
       digitalWrite(heat, LOW);    //heater off
       delay(10);
