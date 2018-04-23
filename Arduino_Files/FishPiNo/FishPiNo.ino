@@ -47,6 +47,7 @@ void setup()
   pinMode(phsetPin, INPUT);
   pinMode(waterPin, INPUT);
   pinMode(ledwater, OUTPUT);
+  pinMode(ECPin, INPUT);
   int waterlevel;
   digitalWrite(ledup, LOW);   // relais off !! depends on relais board you have.
   digitalWrite(ledph, LOW);
@@ -108,6 +109,12 @@ void loop()
     int waterlevel;
     waterlevel = digitalRead(waterPin);
 
+  conductReading = analogRead(ECPin);
+  conductVoltage = conductReading * voltageRange;
+  resistance = ((closedVoltage * resistor) / conductVoltage) - resistor;
+  resistivity = resistance * area / length;
+  conductivity = (1 / resistivity) * 10000;    
+
     if (waterlevel == HIGH)
     {
 
@@ -123,7 +130,10 @@ void loop()
       Serial.print(phValue, 2);
       Serial.print(F(" \t")); //tab
       delay(1000);
-      Serial.println(waterlevel);
+      Serial.print(waterlevel);
+      Serial.print(F(" \t")); //tab
+      delay(1000);
+      Serial.println(conductivity);
       delay(3000);                      // again change to your liking
     }
 
@@ -168,8 +178,11 @@ void loop()
       Serial.print(phValue, 2);
       Serial.print(F(" \t"));     //tab
       delay(1000);
-      Serial.println(waterlevel);
+      Serial.print(waterlevel);
+      Serial.print(F(" \t")); //tab
       delay(1000);
+      Serial.println(conductivity);
+      delay(3000);                      // again change to your liking
       state = digitalRead(heat);  // read the state of the heater-relais(when reset,the heatersign would turn on while heater is off.This gives the right indication.)
     }
 
