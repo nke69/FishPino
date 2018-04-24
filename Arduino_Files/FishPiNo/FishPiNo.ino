@@ -47,7 +47,8 @@ void setup()
   pinMode(phsetPin, INPUT);
   pinMode(waterPin, INPUT);
   pinMode(ledwater, OUTPUT);
-  pinMode(ECPin, INPUT);
+  pinMode(mSouputPin, OUTPUT);
+  pinMode(mSinputPin, INPUT);
   int waterlevel;
   digitalWrite(ledup, LOW);   // relais off !! depends on relais board you have.
   digitalWrite(ledph, LOW);
@@ -75,7 +76,7 @@ void loop()
 
     for (int i = 0; i < 10; i++)                    //Get 10 sample value from the sensor for smooth the value
     {
-      buf[i] =1024 - analogRead(SensorPin);
+      buf[i] = 1024 - analogRead(SensorPin);
       delay(10);
     }
     for (int i = 0; i < 9; i++)                     //sort the analog from small to large
@@ -99,21 +100,43 @@ void loop()
 
     //conversion de la mesure
     //https://books.google.be/books?id=YDhRDwAAQBAJ&pg=PT658&lpg=PT658&dq=pHValue+%3D+3.5*voltage%2BOffset;&source=bl&ots=UYqLUOR3Y8&sig=-UURw-qU26oiAh84YzvhPay1iKU&hl=fr&sa=X&ved=2ahUKEwi1r9Xp3MvaAhUuMuwKHb-mAhsQ6AEwA3oECAAQXg#v=onepage&q=pHValue%20%3D%203.5*voltage%2BOffset%3B&f=false
+
     float voltage = (((float)avgValue) / 10.0) * (5.0 / 1024.0);              //convert the analog into millivolt
     float phValue = voltage * (-1.33) + 7.0;                                  //convert the millivolt into pH value
-    float adjustedph = phValue * 1.627 - 2.499;                               //linear formula
-    //float adjustedph = (-0.01796 * voltage + 1.8056) * phValue - 2.94;      //or quadratic formula 
+    //float adjustedph = phValue * 1.627 - 2.499;                               //linear formula
+    float adjustedph = (-0.01796 * voltage + 1.8056) * phValue - 2.94;      //or quadratic formula
     adjustedph = phValue + Offset;                                            //add Offset if needed in var.h
     phValue = adjustedph;                                                     //convert into pH value
-
+    /*
+        //Ancienne formule pour le pH
+        float phValue=(float)avgValue*5.0/1024; //convert the analog into millivolt
+        phValue=3.5*phValue+Offset;                      //convert the millivolt into pH value
+    */
     int waterlevel;
     waterlevel = digitalRead(waterPin);
 
-  conductReading = analogRead(ECPin);
-  conductVoltage = conductReading * voltageRange;
-  resistance = ((closedVoltage * resistor) / conductVoltage) - resistor;
-  resistivity = resistance * area / length;
-  conductivity = (1 / resistivity) * 10000;    
+    //Calcul de la conductivité
+    int analogValue = 0;
+    int oldAnalogValue = 1000;
+    float returnVoltage = 0.0;
+    float resistance = 0.0;
+    double Siemens;
+    float TDS = 0.0;
+
+    while (((oldAnalogValue - analogValue) > threshold) || (oldAnalogValue < 50))
+    {
+      oldAnalogValue = analogValue;
+      digitalWrite( mSouputPin, HIGH );
+      delay(10); // allow ringing to stop
+      analogValue = analogRead( mSinputPin );
+      digitalWrite( mSouputPin, LOW );
+    }
+
+    returnVoltage = analogValue * ArduinoResolution;
+    resistance = ((5.00 * resistorValue) / returnVoltage) - resistorValue;
+    Siemens = 1.0 / (resistance / 1000000);
+    //Calcul de la conductivité
+
 
     if (waterlevel == HIGH)
     {
@@ -133,7 +156,8 @@ void loop()
       Serial.print(waterlevel);
       Serial.print(F(" \t")); //tab
       delay(1000);
-      Serial.println(conductivity);
+      Serial.println(Siemens); //Calcul de la conductivité
+      if (returnVoltage > 4.9) Serial.println(F("0"));
       delay(3000);                      // again change to your liking
     }
 
@@ -181,7 +205,8 @@ void loop()
       Serial.print(waterlevel);
       Serial.print(F(" \t")); //tab
       delay(1000);
-      Serial.println(conductivity);
+      Serial.println(Siemens); //Calcul de la conductivité
+      if (returnVoltage > 4.9) Serial.println(F("0"));
       delay(3000);                      // again change to your liking
       state = digitalRead(heat);  // read the state of the heater-relais(when reset,the heatersign would turn on while heater is off.This gives the right indication.)
     }

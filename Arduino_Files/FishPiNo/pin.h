@@ -1,14 +1,12 @@
 ///////////////////////////////////////#PIN/////////////////////////////////////////
 
-/*
-  Free Pin :
-  D13
-*/
-
 // pins use for LCD16x2
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-int ECPin = A0;
+//Calcul de la conductivité
+int mSinputPin = A0;
+int mSouputPin = 13;
+
 const int dtempPin = A1;     //Lower temp.Limit pin with potmeter
 const int utempPin = A2;     //Upper temp.limit pin with potmeter
 #define SensorPin A3         //valeur analogique du pH meter sur la pin analogique 3
