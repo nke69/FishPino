@@ -4,8 +4,9 @@
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 //Calcul de la conductivité
-int mSinputPin = A0;
-int mSouputPin = 13;
+#define voltageFlipPin1 10
+#define voltageFlipPin2 13
+#define sensorPin A0
 
 const int dtempPin = A1;     //Lower temp.Limit pin with potmeter
 const int utempPin = A2;     //Upper temp.limit pin with potmeter
@@ -20,4 +21,4 @@ const int ledwater = 8;      //warning led for water level
 int DS18S20_Pin = 9;         //Connect the sensor's T° output to digital pin 9
 //Temperature chip i/o
 OneWire ds(DS18S20_Pin);     // ds18b20 on digital pin 9
-const int ledph = 10;        //led warning ph or relais for magnetic valve co2-system
+//const int ledph = 10;        //led warning ph or relais for magnetic valve co2-system

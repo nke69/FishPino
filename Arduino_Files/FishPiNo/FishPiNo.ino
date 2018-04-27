@@ -40,20 +40,33 @@ void setup()
   lcd.createChar(5, tank);
   lcd.createChar(6, co2);
   pinMode(ledup, OUTPUT);
-  pinMode(ledph, OUTPUT);
+//  pinMode(ledph, OUTPUT);
   pinMode(heat, OUTPUT);
   pinMode(utempPin, INPUT);
   pinMode(dtempPin, INPUT);
   pinMode(phsetPin, INPUT);
   pinMode(waterPin, INPUT);
   pinMode(ledwater, OUTPUT);
-  pinMode(mSouputPin, OUTPUT);
-  pinMode(mSinputPin, INPUT);
+  pinMode(voltageFlipPin1, OUTPUT);
+  pinMode(voltageFlipPin2, OUTPUT);
+  pinMode(sensorPin, INPUT);
+
   int waterlevel;
   digitalWrite(ledup, LOW);   // relais off !! depends on relais board you have.
-  digitalWrite(ledph, LOW);
+//  digitalWrite(ledph, LOW);
   digitalWrite(heat, LOW);
   state == LOW ;              // heat sign off
+}
+
+//Calcul de la conductivité
+void setSensorPolarity(boolean flip) {
+  if (flip) {
+    digitalWrite(voltageFlipPin1, HIGH);
+    digitalWrite(voltageFlipPin2, LOW);
+  } else {
+    digitalWrite(voltageFlipPin1, LOW);
+    digitalWrite(voltageFlipPin2, HIGH);
+  }
 }
 
 
@@ -112,29 +125,30 @@ void loop()
         float phValue=(float)avgValue*5.0/1024; //convert the analog into millivolt
         phValue=3.5*phValue+Offset;                      //convert the millivolt into pH value
     */
+
+    //Calcul niveau eau
     int waterlevel;
     waterlevel = digitalRead(waterPin);
+    //Calcul niveau eau
 
     //Calcul de la conductivité
-    int analogValue = 0;
-    int oldAnalogValue = 1000;
-    float returnVoltage = 0.0;
-    float resistance = 0.0;
-    double Siemens;
-    float TDS = 0.0;
+    setSensorPolarity(true);
+    delay(flipTimer);
+    int val1 = analogRead(sensorPin);
+    delay(flipTimer);
+    setSensorPolarity(false);
+    delay(flipTimer);
+    // invert the reading
+    int val2 = 1023 - analogRead(sensorPin);
+    //
+    //reportLevels(val1, val2);
 
-    while (((oldAnalogValue - analogValue) > threshold) || (oldAnalogValue < 50))
-    {
-      oldAnalogValue = analogValue;
-      digitalWrite( mSouputPin, HIGH );
-      delay(10); // allow ringing to stop
-      analogValue = analogRead( mSinputPin );
-      digitalWrite( mSouputPin, LOW );
-    }
+    int avg = (val1 + val2) / 2;
 
-    returnVoltage = analogValue * ArduinoResolution;
-    resistance = ((5.00 * resistorValue) / returnVoltage) - resistorValue;
-    Siemens = 1.0 / (resistance / 1000000);
+    const float resistorValue = 100000.0;
+    float voltage2 = avg * (5.0 / 1023.0); //calculation of relative conductivity
+    float resistance = ((5.00 * resistorValue) / voltage2) - resistorValue;
+    float Siemens = 1.0 / (resistance / 100000000);
     //Calcul de la conductivité
 
 
@@ -149,16 +163,16 @@ void loop()
       lcd.print(F("____TROP BAS____")); // low  ,again total of 16 characters
       Serial.print(getTemp(), 1);
       Serial.print(F(" \t")); //tab
-      delay(1000);
+      delay(1500);
       Serial.print(phValue, 2);
       Serial.print(F(" \t")); //tab
-      delay(1000);
+      delay(1500);
       Serial.print(waterlevel);
       Serial.print(F(" \t")); //tab
-      delay(1000);
-      Serial.println(Siemens); //Calcul de la conductivité
-      if (returnVoltage > 4.9) Serial.println(F("0"));
-      delay(3000);                      // again change to your liking
+      delay(1500);
+      Serial.println(avg); //Calcul de la conductivité
+      //if (voltage2 > 0.5) Serial.println(F("0"));
+      delay(5000);                      // again change to your liking
     }
 
     else
@@ -195,19 +209,19 @@ void loop()
       lcd.print(F(" "));
       lcd.setCursor(10, 1);
       lcd.print(char(5));
-      delay(3000);                // Rafraichissement des donnees
+      //delay(3000);                // Rafraichissement des donnees
       Serial.print(getTemp(), 1);
       Serial.print(F(" \t"));     //tab
-      delay(1000);
+      delay(1500);
       Serial.print(phValue, 2);
       Serial.print(F(" \t"));     //tab
-      delay(1000);
+      delay(1500);
       Serial.print(waterlevel);
       Serial.print(F(" \t")); //tab
-      delay(1000);
+      delay(1500);
       Serial.println(Siemens); //Calcul de la conductivité
-      if (returnVoltage > 4.9) Serial.println(F("0"));
-      delay(3000);                      // again change to your liking
+      //if (voltage2 > 0.5) Serial.println(F("0"));
+      delay(5000);                      // again change to your liking
       state = digitalRead(heat);  // read the state of the heater-relais(when reset,the heatersign would turn on while heater is off.This gives the right indication.)
     }
 
@@ -262,7 +276,7 @@ void loop()
 
     if (phValue > phset + 0.05)   // offset 0.05  pH is allowed to rise above the set pH value before before switching on co2 or led
     {
-      digitalWrite(ledph, LOW);   // magnetvalve co2 open,(or led on in breadboard)
+      //digitalWrite(ledph, LOW);   // magnetvalve co2 open,(or led on in breadboard)
       delay(10);
       lcd.setCursor(11, 1);
       lcd.print(char(6));
@@ -271,7 +285,7 @@ void loop()
 
     else if (phValue <= phset)
     {
-      digitalWrite(ledph, HIGH);  //magnetvalve co2 closed, (or led off in breadboard)
+      //digitalWrite(ledph, HIGH);  //magnetvalve co2 closed, (or led off in breadboard)
       delay(10);
       lcd.setCursor(11, 1);
       lcd.print(F(" "));
