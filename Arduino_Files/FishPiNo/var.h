@@ -1,13 +1,10 @@
 /////////////////////////////////////#VAR///////////////////////////////////////////
-//Calcul de la conductivité
-int flipTimer = 1000;
-
 int val, phset;
 int state;
 int utemp = 0, dtemp = 0, valup = 0, valdown = 0;
 
 unsigned long int avgValue; //Store the average value of the sensor feedback
-#define Offset 1.80         //offset pH from sensor in calibration  1.80
+#define Offset -2.00         //offset pH from sensor in calibration  1.80
 int buf[10], temp;          // tableau d'entiers de 10 valeurs et valeur tampon pour le triage
 float b;
 

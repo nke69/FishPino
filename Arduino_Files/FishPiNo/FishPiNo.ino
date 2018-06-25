@@ -1,22 +1,25 @@
 /***********************************************************************
-   FishPiNo.ino
-   Hardware platform   : Arduino Uno
-   Author  :  nke69
-   Version :  V1.0
-   Date    :  19/04/2018
-
-
-   Table of contents:
-   Libraries                                 - [#LIBRARIES]
-   Global Variables                          - [#var.h]
-   Pins                                      - [#pin.h]
-   Methods                                   - [#method.h]
-   Setup Function                            - [#SETUP]
-   Start Of Main Loop                        - [#LOOP]
+ * FishPiNo.ino
+ * Hardware platform   : Arduino Uno
+ * Author  :  nke69
+ * Version :  V1.0
+ * Date    :  19/04/2018
+ * 
+ * 
+ * Table of contents:
+ * Libraries                                 - [#LIBRARIES]
+ * Global Variables                          - [#var.h]
+ * Pins                                      - [#pin.h]
+ * Methods                                   - [#method.h]
+ * Setup Function                            - [#SETUP]
+ * Start Of Main Loop                        - [#LOOP]
  **********************************************************************/
 
 ///////////////////////////////////#LIBRARIES///////////////////////////////////////
 
+#include <Firmata.h>
+#include <Boards.h>
+#include <ArduinoJson.h>
 #include <Adafruit_Sensor.h>
 #include <LiquidCrystal.h>
 #include <OneWire.h>
@@ -25,12 +28,15 @@
 #include "pin.h"
 #include "method.h"
 
+#define DIM  10
+int pwm =0;
+String recu;
 
 /////////////////////////////////////#SETUP/////////////////////////////////////////
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   lcd.begin(16, 2);
   lcd.setCursor(0, 0);
   lcd.createChar(1, flame);
@@ -40,35 +46,37 @@ void setup()
   lcd.createChar(5, tank);
   lcd.createChar(6, co2);
   pinMode(ledup, OUTPUT);
-//  pinMode(ledph, OUTPUT);
+  pinMode(ledph, OUTPUT);
   pinMode(heat, OUTPUT);
   pinMode(utempPin, INPUT);
   pinMode(dtempPin, INPUT);
   pinMode(phsetPin, INPUT);
   pinMode(waterPin, INPUT);
   pinMode(ledwater, OUTPUT);
-  pinMode(voltageFlipPin1, OUTPUT);
-  pinMode(voltageFlipPin2, OUTPUT);
-  pinMode(sensorPin, INPUT);
+  
+  
+  
+  
+  
+  pinMode(pin13,OUTPUT);
+  
+  pinMode(2,1);
+  pinMode(3,1);
+  pinMode(4,1);
+  pinMode(A3,1);
+  pinMode(A1,0);
+  analogWrite(A3,1024);
 
+
+  
+  
+  const int phsetPin = A4;
   int waterlevel;
   digitalWrite(ledup, LOW);   // relais off !! depends on relais board you have.
-//  digitalWrite(ledph, LOW);
+  digitalWrite(ledph, LOW);
   digitalWrite(heat, LOW);
   state == LOW ;              // heat sign off
 }
-
-//Calcul de la conductivité
-void setSensorPolarity(boolean flip) {
-  if (flip) {
-    digitalWrite(voltageFlipPin1, HIGH);
-    digitalWrite(voltageFlipPin2, LOW);
-  } else {
-    digitalWrite(voltageFlipPin1, LOW);
-    digitalWrite(voltageFlipPin2, HIGH);
-  }
-}
-
 
 /////////////////////////////////////#LOOP//////////////////////////////////////////
 
@@ -89,7 +97,7 @@ void loop()
 
     for (int i = 0; i < 10; i++)                    //Get 10 sample value from the sensor for smooth the value
     {
-      buf[i] = 1024 - analogRead(SensorPin);
+      buf[i]=analogRead(SensorPin);
       delay(10);
     }
     for (int i = 0; i < 9; i++)                     //sort the analog from small to large
@@ -105,52 +113,14 @@ void loop()
       }
     }
 
-    // calcul de la moyenne des mesures en ne prenant pas les deux plus petites ni les deux plus grandes
-    avgValue = 0;
-    for (int i = 2; i < 12; i++)                       //take the average value of 10 center sample
-      avgValue += buf[i];
-    avgValue = avgValue / 10;                          // cos' 10 mesures
+    avgValue=0;
+    for(int i=2;i<8;i++)                      //take the average value of 6 center sample
+      avgValue+=buf[i];
+    float phValue=(float)avgValue*5.0/1024/6; //convert the analog into millivolt
+    phValue=3.5*phValue+Offset;                      //convert the millivolt into pH value
 
-    //conversion de la mesure
-    //https://books.google.be/books?id=YDhRDwAAQBAJ&pg=PT658&lpg=PT658&dq=pHValue+%3D+3.5*voltage%2BOffset;&source=bl&ots=UYqLUOR3Y8&sig=-UURw-qU26oiAh84YzvhPay1iKU&hl=fr&sa=X&ved=2ahUKEwi1r9Xp3MvaAhUuMuwKHb-mAhsQ6AEwA3oECAAQXg#v=onepage&q=pHValue%20%3D%203.5*voltage%2BOffset%3B&f=false
-
-    float voltage = (((float)avgValue) / 10.0) * (5.0 / 1024.0);              //convert the analog into millivolt
-    float phValue = voltage * (-1.33) + 7.0;                                  //convert the millivolt into pH value
-    //float adjustedph = phValue * 1.627 - 2.499;                               //linear formula
-    float adjustedph = (-0.01796 * voltage + 1.8056) * phValue - 2.94;      //or quadratic formula
-    adjustedph = phValue + Offset;                                            //add Offset if needed in var.h
-    phValue = adjustedph;                                                     //convert into pH value
-    /*
-        //Ancienne formule pour le pH
-        float phValue=(float)avgValue*5.0/1024; //convert the analog into millivolt
-        phValue=3.5*phValue+Offset;                      //convert the millivolt into pH value
-    */
-
-    //Calcul niveau eau
     int waterlevel;
-    waterlevel = digitalRead(waterPin);
-    //Calcul niveau eau
-
-    //Calcul de la conductivité
-    setSensorPolarity(true);
-    delay(flipTimer);
-    int val1 = analogRead(sensorPin);
-    delay(flipTimer);
-    setSensorPolarity(false);
-    delay(flipTimer);
-    // invert the reading
-    int val2 = 1023 - analogRead(sensorPin);
-    //
-    //reportLevels(val1, val2);
-
-    int avg = (val1 + val2) / 2;
-
-    const float resistorValue = 100000.0;
-    float voltage2 = avg * (5.0 / 1023.0); //calculation of relative conductivity
-    float resistance = ((5.00 * resistorValue) / voltage2) - resistorValue;
-    float Siemens = 1.0 / (resistance / 100000000);
-    //Calcul de la conductivité
-
+    waterlevel=digitalRead(waterPin);
 
     if (waterlevel == HIGH)
     {
@@ -168,11 +138,8 @@ void loop()
       Serial.print(F(" \t")); //tab
       delay(1500);
       Serial.print(waterlevel);
-      Serial.print(F(" \t")); //tab
-      delay(1500);
-      Serial.println(avg); //Calcul de la conductivité
-      //if (voltage2 > 0.5) Serial.println(F("0"));
-      delay(5000);                      // again change to your liking
+      Serial.println(F(" \t")); //tab
+      delay(5000);
     }
 
     else
@@ -210,18 +177,19 @@ void loop()
       lcd.setCursor(10, 1);
       lcd.print(char(5));
       //delay(3000);                // Rafraichissement des donnees
+      Serial.print("{\"temperature_raw\":");
       Serial.print(getTemp(), 1);
-      Serial.print(F(" \t"));     //tab
-      delay(1500);
+      delay(2000);
+      //Serial.print(F(" \t"));     //tab
+      Serial.print(",\"pH_raw\":");
       Serial.print(phValue, 2);
-      Serial.print(F(" \t"));     //tab
-      delay(1500);
+      delay(2000);
+      //Serial.print(F(" \t"));     //tab
+      Serial.print(",\"niveau_raw\":");
       Serial.print(waterlevel);
-      Serial.print(F(" \t")); //tab
-      delay(1500);
-      Serial.println(Siemens); //Calcul de la conductivité
-      //if (voltage2 > 0.5) Serial.println(F("0"));
-      delay(5000);                      // again change to your liking
+      //Serial.println(F(" \t")); //tab
+      Serial.println("}");
+      delay(2000);
       state = digitalRead(heat);  // read the state of the heater-relais(when reset,the heatersign would turn on while heater is off.This gives the right indication.)
     }
 
@@ -292,4 +260,39 @@ void loop()
       delay(5);
     }
   }
+  
+  
+  if(Serial.available()>0)
+  {
+    recu = Serial.readStringUntil('\n');
+    // Ordre d'allumer la LED13
+    if(recu=="L13") digitalWrite(pin13,HIGH);
+    else 
+    // Ordre d'éteindre la LED13
+    if(recu == "l13") digitalWrite(pin13,LOW);
+    else
+    // Ordre de gradation de la LED10
+    if((pwm=recu.toInt())<=100 && pwm>=0) analogWrite(DIM,map(pwm,0,100,0,255));   
+
+    if(recu.substring(0,2)=="on")
+      digitalWrite((recu.substring(2,4)).toInt(),1);
+    else if(recu.substring(0,3)=="off")
+      digitalWrite((recu.substring(3,5)).toInt(),0);
+    else if(recu.substring(0,3)=="tog")
+      digitalWrite((recu.substring(3,5)).toInt(),digitalRead((recu.substring(3,5)).toInt())?0:1);
+    else if(recu.substring(0,3)=="pwm")
+      analogWrite((recu.substring(3,5)).toInt(),(recu.substring(5,8)).toInt());   
+   
+    
+  }
+  int pot1 = analogRead(A1);
+  int pot2 = analogRead(A2);
+  
+  Serial.print(pot1);
+  Serial.print(";");
+  Serial.print(pot2);
+  Serial.print("\n");  
+
+ 
 }
+

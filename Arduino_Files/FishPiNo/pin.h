@@ -3,15 +3,9 @@
 // pins use for LCD16x2
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-//Calcul de la conductivité
-#define voltageFlipPin1 10
-#define voltageFlipPin2 13
-#define sensorPin A0
-
 const int dtempPin = A1;     //Lower temp.Limit pin with potmeter
 const int utempPin = A2;     //Upper temp.limit pin with potmeter
-#define SensorPin A3         //valeur analogique du pH meter sur la pin analogique 3
-const int phsetPin = A4;     //Connect the sensor's Po output to analogue pin 4
+#define SensorPin A0         //valeur analogique du pH meter sur la pin analogique 3
 #define phsetPin A4          //set desired ph-value with potmeter
 const int heat = A5;         //relais heater element
 
@@ -21,4 +15,6 @@ const int ledwater = 8;      //warning led for water level
 int DS18S20_Pin = 9;         //Connect the sensor's T° output to digital pin 9
 //Temperature chip i/o
 OneWire ds(DS18S20_Pin);     // ds18b20 on digital pin 9
-//const int ledph = 10;        //led warning ph or relais for magnetic valve co2-system
+const int ledph = 10;        //led warning ph or relais for magnetic valve co2-system
+
+int pin13(13);
